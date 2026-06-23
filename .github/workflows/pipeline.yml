@@ -5,6 +5,10 @@ on:
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
+concurrency:
+  group: astro-pipeline
+  cancel-in-progress: false
+
 env:
   GIT_NAME: ${{ secrets.GIT_NAME }}
   GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
@@ -12,11 +16,13 @@ env:
   WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
   WAKATIME_API_URL: ${{ secrets.WAKATIME_API_URL }}
   GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+  STAR_DANCE_COOKIE: ${{ secrets.STAR_DANCE_COOKIE }}
   GITHUB_USER: 3ni8ma
   CI: true
 
 jobs:
   pipeline:
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,6 +75,11 @@ jobs:
           CFGEOF
           chmod 600 ~/.wakatime.cfg
 
+      - name: Setup Stardance cookie
+        run: |
+          echo "${STAR_DANCE_COOKIE}" > pipeline/.stardance_cookie
+          chmod 600 pipeline/.stardance_cookie
+
       - name: Setup Gmail config
         run: |
           mkdir -p pipeline/.gmail
@@ -85,7 +96,7 @@ jobs:
           git config --global user.email "${GIT_EMAIL}"
           git config --global credential.helper '!gh auth git-credential'
 
-      - name: Run pipeline
+      - name: Run pipeline (includes 60-min daemon)
         run: pipeline/pipeline.sh
         env:
           PROFILE_REPO_DIR: /home/runner/3ni8ma

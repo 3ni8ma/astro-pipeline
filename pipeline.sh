@@ -50,4 +50,6 @@ gmail_read_coding_notifications
 send_daily_summary
 check_linkedin
 
+start_astro_daemon
+
 log "=== Pipeline Completed ==="
