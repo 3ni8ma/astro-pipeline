@@ -22,14 +22,14 @@ make_daily_contributions() {
 
   local shuffled="$(python3 -c "
 import random
-indices = list(range(1, $total + 1))
+indices = list(range(0, $total))
 random.shuffle(indices)
 selected = indices[:$target]
 print(' '.join(str(i) for i in selected))
 " 2>/dev/null)"
 
   if [ -z "$shuffled" ]; then
-    shuffled="$(seq 1 $total | sort -R | head -$target | tr '\n' ' ')"
+    shuffled="$(seq 0 $((total - 1)) | python3 -c "import random,sys; indices=sys.stdin.read().split(); random.shuffle(indices); print(' '.join(indices[:$target]))" 2>/dev/null || seq 0 $((total - 1)) | sort -R | head -$target | tr '\n' ' ')"
   fi
 
   local SHELL_LOG="$LOG_FILE"
@@ -38,7 +38,7 @@ print(' '.join(str(i) for i in selected))
   for idx in $(echo "$shuffled" | tr -s ' \n' ' '); do
     [ "$picked" -ge "$target" ] && break
     [ -z "$idx" ] && continue
-    local script_path="${SCRIPTS[$idx]}"
+    local script_path="${SCRIPTS[$idx]:-}"
     [ -z "$script_path" ] && continue
     [ ! -f "$script_path" ] && continue
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Running: $(basename "$script_path")" | tee -a "$SHELL_LOG"
