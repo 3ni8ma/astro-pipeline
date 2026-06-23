@@ -1,0 +1,14 @@
+[Unit]
+Description=Astro Pipeline Heartbeat Daemon
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/home/ubuntu/astro-pipeline/vm/astro-daemon.sh
+Environment=WAKATIME_CFG=/home/ubuntu/.wakatime.cfg
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

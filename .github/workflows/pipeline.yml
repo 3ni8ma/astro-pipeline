@@ -1,0 +1,92 @@
+name: Astro Pipeline
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+env:
+  GIT_NAME: ${{ secrets.GIT_NAME }}
+  GIT_EMAIL: ${{ secrets.GIT_EMAIL }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+  WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
+  WAKATIME_API_URL: ${{ secrets.WAKATIME_API_URL }}
+  GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+  GITHUB_USER: 3ni8ma
+  CI: true
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pipeline
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache repo clones
+        uses: actions/cache@v4
+        id: cache-repos
+        with:
+          path: |
+            /home/runner/3ni8ma
+            /home/runner/cli-tool
+            /home/runner/TheCoderBros-Website
+            /home/runner/aarushkarak-website
+            /home/runner/react-hooks
+            /home/runner/tailwind-plugin
+            /home/runner/vite-plugin
+            /home/runner/HomeFixAI
+            /home/runner/openhuman
+            /home/runner/astro-tasks
+          key: repos-${{ hashFiles('pipeline/contributions/*.sh') }}
+          restore-keys: repos-
+
+      - name: Clone repos
+        run: |
+          for repo in 3ni8ma/3ni8ma 3ni8ma/cli-tool 3ni8ma/TheCoderBros-Website \
+                      3ni8ma/aarushkarak-website 3ni8ma/react-hooks \
+                      3ni8ma/tailwind-plugin 3ni8ma/vite-plugin \
+                      3ni8ma/HomeFixAI 3ni8ma/openhuman 3ni8ma/astro-tasks; do
+            dir="$HOME/$(basename $repo)"
+            if [ -d "$dir/.git" ]; then
+              (cd "$dir" && git pull origin HEAD 2>/dev/null) || true
+            else
+              gh repo clone "$repo" "$dir" 2>/dev/null || true
+            fi
+          done
+
+      - name: Setup WakaTime config
+        run: |
+          cat > ~/.wakatime.cfg << CFGEOF
+          [settings]
+          api_key = ${WAKATIME_API_KEY}
+          api_url = ${WAKATIME_API_URL}
+          debug = false
+          CFGEOF
+          chmod 600 ~/.wakatime.cfg
+
+      - name: Setup Gmail config
+        run: |
+          mkdir -p pipeline/.gmail
+          echo "${GMAIL_APP_PASSWORD}" > pipeline/.gmail/app-password
+          chmod 600 pipeline/.gmail/app-password
+
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${GH_TOKEN}" | gh auth login --with-token 2>/dev/null || true
+
+      - name: Set git config
+        run: |
+          git config --global user.name "${GIT_NAME}"
+          git config --global user.email "${GIT_EMAIL}"
+          git config --global credential.helper '!gh auth git-credential'
+
+      - name: Run pipeline
+        run: pipeline/pipeline.sh
+        env:
+          PROFILE_REPO_DIR: /home/runner/3ni8ma
+          REPOS_DIR: /home/runner
